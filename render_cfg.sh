@@ -9,14 +9,14 @@ service=$1
 template=$2
 oldfile=/tmp/cfg.$service
 tmpfile=$(mktemp -t cfg.$service.XXXXXXX)
-nslookup $service | gawk -F": " '/Address/{print $2}' | gawk '{print $1}' | sort | paste -sd ',' > $tmpfile
+nslookup $service 2>/dev/null | gawk '/Address /{print $3}' | sort | paste -sd ',' > $tmpfile
 
 # Check for fatal errors
 if ! [ -f $template ]; then
   echo "Template file $template does not exist."
   exit 1
 fi
-if [ `wc -c $tmpfile | gawk '{print $1}'` -eq 0 ]; then
+if [ $(wc -c $tmpfile | gawk '{print $1}') -eq 0 ]; then
   echo "Unable to resolve addresses for $service "
   exit 1
 fi
