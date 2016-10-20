@@ -9,8 +9,7 @@ service=$1
 template=$2
 oldfile=/tmp/cfg.$service
 tmpfile=$(mktemp -t cfg.$service.XXXXXXX)
-getent hosts $service | awk '{print $1}' | sort | paste -sd ',' > $tmpfile
-#echo '1.2.3.4,1.2.3.5,1.2.3.6' > $tmpfile
+nslookup $service | awk -F": " '/Address/{print $2}' | awk '{print $1}' | sort | paste -sd ',' > $tmpfile
 
 # Check for fatal errors
 if ! [ -f $template ]; then
@@ -23,7 +22,7 @@ if [ `wc -c $tmpfile | awk '{print $1}'` -eq 0 ]; then
 fi
 
 # Check if IP addresses for service changed
-if test -f $oldfile && cmp --silent $oldfile $tmpfile; then
+if test -f $oldfile && cmp -s $oldfile $tmpfile; then
   exit 2
 fi
 
