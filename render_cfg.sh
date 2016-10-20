@@ -17,7 +17,7 @@ if ! [ -f $template ]; then
   echo "Template file $template does not exist."
   exit 1
 fi
-if [ $(wc -c $tmpfile) -eq 0 ]; then
+if [ `wc -c $tmpfile | awk '{print $1}'` -eq 0 ]; then
   echo "Unable to resolve addresses for $service "
   exit 1
 fi
@@ -56,4 +56,3 @@ rm $tmptpl2
 
 # 0 means config was updated
 exit 0
-
