@@ -9,14 +9,14 @@ service=$1
 template=$2
 oldfile=/tmp/cfg.$service
 tmpfile=$(mktemp -t cfg.$service.XXXXXXX)
-nslookup $service | awk -F": " '/Address/{print $2}' | awk '{print $1}' | sort | paste -sd ',' > $tmpfile
+nslookup $service | gawk -F": " '/Address/{print $2}' | gawk '{print $1}' | sort | paste -sd ',' > $tmpfile
 
 # Check for fatal errors
 if ! [ -f $template ]; then
   echo "Template file $template does not exist."
   exit 1
 fi
-if [ `wc -c $tmpfile | awk '{print $1}'` -eq 0 ]; then
+if [ `wc -c $tmpfile | gawk '{print $1}'` -eq 0 ]; then
   echo "Unable to resolve addresses for $service "
   exit 1
 fi
@@ -36,7 +36,7 @@ while true; do
   pattern=$(sed -n '/^\s*{{HOSTS}}$/,/^\s*{{\/HOSTS}}$/{//!p}' $tmptpl | head -n 1)
   #pattern='server ${service}${num} ${ip}:3306 check'
   [ -n "$pattern" ] || break
-  awk "BEGIN{a=0} /{{HOSTS}}/&&a==0 {f=1} !f; /{{\\/HOSTS}}/&&a==0 {print \"\${HOSTS$index}\"; f=0; a++}" $tmptpl > $tmptpl2
+  gawk "BEGIN{a=0} /{{HOSTS}}/&&a==0 {f=1} !f; /{{\\/HOSTS}}/&&a==0 {print \"\${HOSTS$index}\"; f=0; a++}" $tmptpl > $tmptpl2
   HOSTS="";SEP=""
   for ip in "${ips[@]}"; do
     num=${ip##*.}
