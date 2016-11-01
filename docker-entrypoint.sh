@@ -50,9 +50,10 @@ fi
 while sleep $UPDATE_FREQUENCY; do
 	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
 	# Exit code 0 means template was updated, 1 means error and 2 means not updated
-	if [ $? -eq 0 ]; then
+    RENDER_RESULT=$?
+	if [ $RENDER_RESULT -eq 0 ]; then
         reload
-	elif [ $? -eq 1 ]; then
+	elif [ $RENDER_RESULT -eq 1 ]; then
 		echo "Error updating config template"
 	fi
 done &
