@@ -13,17 +13,25 @@ nslookup $service 2>/dev/null | gawk '/Address /{print $3}' | sort | paste -sd '
 
 # Check for fatal errors
 if ! [ -f $template ]; then
+  rm $tmpfile
   echo "Template file $template does not exist."
   exit 1
 fi
 if [ $(wc -c $tmpfile | gawk '{print $1}') -eq 0 ]; then
+  rm $tmpfile
   echo "Unable to resolve addresses for $service "
   exit 1
 fi
 
 # Check if IP addresses for service changed
 if test -f $oldfile && cmp -s $oldfile $tmpfile; then
+  rm $tmpfile
   exit 2
+fi
+
+# Remove oldfile to prevent tmp file accumulation
+if [ -f $oldfile ]; then
+  rm $oldfile
 fi
 
 prefix=node
