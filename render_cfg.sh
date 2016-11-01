@@ -29,6 +29,11 @@ if test -f $oldfile && cmp -s $oldfile $tmpfile; then
   exit 2
 fi
 
+# Remove oldfile to prevent tmp file accumulation
+if [ -f $oldfile ]; then
+  rm $oldfile
+fi
+
 prefix=node
 IFS=',' read -ra ips < $tmpfile
 tmptpl=$(mktemp -t tpl.XXXXXXX)
