@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash
 
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
@@ -11,8 +11,13 @@ if [ "$1" = 'haproxy' ]; then
 	set -- "$(which haproxy-systemd-wrapper)" -p /run/haproxy.pid "$@"
 fi
 
-# start processes
-set +e -m
+# enable job control, start processes
+set -m
+
+# Set 'TRACE=y' environment variable to see detailed output for debugging
+if [ "$TRACE" = "y" ]; then
+	set -x
+fi
 
 TEMPLATE=${TEMPLATE:-/etc/haproxy.cfg.tpl}
 UPDATE_FREQUENCY=${UPDATE_FREQUENCY:-30}
