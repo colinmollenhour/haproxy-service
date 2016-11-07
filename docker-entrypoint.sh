@@ -11,6 +11,11 @@ if [ "$1" = 'haproxy' ]; then
 	set -- "$(which haproxy-systemd-wrapper)" -p /run/haproxy.pid "$@"
 fi
 
+PREFIX=docker-entrypoint.sh
+TEMPLATE=${TEMPLATE:-/etc/haproxy.cfg.tpl}
+UPDATE_FREQUENCY=${UPDATE_FREQUENCY:-30}
+WRAPPER_PID=0
+
 # enable job control, start processes
 set -m
 
@@ -19,24 +24,26 @@ if [ "$TRACE" = "y" ]; then
 	set -x
 fi
 
-TEMPLATE=${TEMPLATE:-/etc/haproxy.cfg.tpl}
-UPDATE_FREQUENCY=${UPDATE_FREQUENCY:-30}
 if [ -z "$SERVICE_HOSTNAME" ]; then
-	echo "The SERVICE_HOSTNAME environment variable is not defined."
+	echo $PREFIX: The SERVICE_HOSTNAME environment variable is not defined.
 	exit 1
 fi
 
 # Trap Shutdown
 function shutdown () {
-	echo Shutting down
-	test -s /run/haproxy.pid && kill -TERM $(cat /run/haproxy.pid)
+	echo $PREFIX: Shutting down...
+	kill -TERM $WRAPPER_PID
 }
 trap shutdown TERM INT
 
 # Trap Reload (HUP)
 function reload () {
-    echo Reloading config
-    test -s /run/haproxy.pid && kill -HUP $(cat /run/haproxy.pid)
+	if haproxy -c -f ${TEMPLATE%.tpl} >/dev/null; then
+		echo $PREFIX: Reloading config...
+		kill -HUP $WRAPPER_PID
+	else
+		echo $PREFIX: Config test failed, will not reload haproxy.
+	fi
 }
 trap reload HUP
 
@@ -46,7 +53,7 @@ if [ $? -eq 1 ]; then
 	sleep 5
 	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
 	if [ $? -eq 1 ]; then
-    	echo "Could not render haproxy.cfg from template. Refusing to start."
+		echo $PREFIX: Could not render ${TEMPLATE%.tpl}. Refusing to start.
 		exit 1
 	fi
 fi
@@ -59,15 +66,16 @@ while sleep $UPDATE_FREQUENCY; do
 	if [ $RENDER_RESULT -eq 0 ]; then
 		reload
 	elif [ $RENDER_RESULT -eq 1 ]; then
-		echo "Error updating config template"
+		echo $PREFIX: Error updating config template!
 	fi
 done &
-renderPid=$!
+RENDER_PID=$!
 
-# Run HAProxy and wait for exit
+# Run HAProxy (haproxy-systemd-wrapper) and wait for exit
 "$@" &
-wait $!
+WRAPPER_PID=$!
+wait $WRAPPER_PID
 RC=$?
 
-kill $renderPid
+kill $RENDER_PID
 exit $RC
