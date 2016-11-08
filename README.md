@@ -9,6 +9,18 @@ You can either run this container directly by mounting a template file at /etc/h
 or by copying and baking the template file in using a new Dockerfile. Either way it requires
 an environment variable `SERVICE_HOSTNAME` which is the DNS name to resolve when updating the template.
 
+#### Logging
+
+Rsyslog is installed in order to provide syslog messages from haproxy on stdout. It can be disabled by
+setting the `RSYSLOG` environment variable to `n`. In order to use it your HAProxy config should look like
+something like this:
+
+    global
+      log 127.0.0.1 local0 notice
+    
+    defaults
+      log global
+
 #### Examples
 
 Run directly:

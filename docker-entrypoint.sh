@@ -37,6 +37,13 @@ if [ $? -eq 1 ]; then
 	fi
 fi
 
+# Run rsyslogd if enabled
+RSYSLOG_PID=0
+if [ "$RSYSLOG" != "n" ]; then
+	rsyslogd -n -f /etc/rsyslogd.conf &
+	RSYSLOGD_PID=$!
+fi
+
 # Run HAProxy (haproxy-systemd-wrapper) and wait for exit
 "$@" &
 WRAPPER_PID=$!
@@ -76,4 +83,5 @@ wait $WRAPPER_PID
 RC=$?
 
 kill $RENDER_PID
+[ "$RSYSLOG_PID" -ne 0 ] && kill $RSYSLOG_PID
 exit $RC
