@@ -8,6 +8,7 @@ to trigger the update and apply the template and reload HAProxy.
 You can either run this container directly by mounting a template file at /etc/haproxy.cfg.tpl
 or by copying and baking the template file in using a new Dockerfile. Either way it requires
 an environment variable `SERVICE_HOSTNAME` which is the DNS name to resolve when updating the template.
+Multiple DNS hostnames may be specified separated by commas.
 
 #### Logging
 

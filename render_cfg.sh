@@ -3,13 +3,17 @@
 # Renders a foo.cfg.tpl file into foo.cfg
 # Uses DNS RR resolution to render a line for each resolved host.
 #
-# $ render_cfg.sh <hostname> </path/to/haproxy.cfg.tpl>
+#   $ render_cfg.sh <hostnames> </path/to/haproxy.cfg.tpl>
 #
+# Multiple hostnames may be given separated by commas, with no spaces
+
 service=$1
 template=$2
-oldfile=/tmp/cfg.$service
-tmpfile=$(mktemp -t cfg.$service.XXXXXXX)
-nslookup $service 2>/dev/null | gawk '/Address /{print $3}' | sort | paste -sd ',' > $tmpfile
+oldfile=/tmp/cfg.$(<<<$service md5sum - | awk '{print $1}')
+tmpfile=$(mktemp -t cfg.XXXXXXX)
+for _service in ${service//,/ }; do
+  nslookup $_service 2>/dev/null | gawk '/Address /{print $3}'
+done | sort | paste -sd ',' > $tmpfile
 
 # Check for fatal errors
 if ! [ -f $template ]; then
