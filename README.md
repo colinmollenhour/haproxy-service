@@ -59,3 +59,7 @@ If the `SERVICE_HOSTNAME` resolves to 10.0.0.12 and 10.0.0.20 it would render:
     server node12 10.0.0.12:3306 check
     server node20 10.0.0.20:3306 check
 
+#### Init Scripts
+
+If you need to run some basic scripts on init before the first template render mount or add a file at
+`/docker-entrypoint-init.sh` which will be sourced by `docker-entrypoint.sh` once on startup.

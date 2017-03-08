@@ -26,6 +26,11 @@ if [ -z "$SERVICE_HOSTNAME" ]; then
 	exit 1
 fi
 
+# Run init script if it exists
+if [[ -f /docker-entrypoint-init.sh ]]; then
+	source /docker-entrypoint-init.sh
+fi
+
 # Render config template once before starting HAProxy
 /render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
 if [ $? -eq 1 ]; then
