@@ -46,6 +46,7 @@ fi
 # Run rsyslogd if enabled
 RSYSLOG_PID=0
 if [ "$RSYSLOG" != "n" ]; then
+	rm -f /var/run/rsyslog.pid
 	rsyslogd -n -f /etc/rsyslogd.conf &
 	RSYSLOGD_PID=$!
 fi
