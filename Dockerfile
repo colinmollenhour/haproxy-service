@@ -3,9 +3,11 @@ FROM haproxy:1.7-alpine
 RUN apk add --no-cache \
        bash \
        coreutils \
-       sed \
        gawk \
-       rsyslog
+       rsyslog \
+       sed \
+       socat \
+    ;
 
 ENV RSYSLOG=y
 
