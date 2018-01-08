@@ -30,11 +30,11 @@ Run directly:
       -e SERVICE_HOSTNAME=tasks.galera \
       -e UPDATE_FREQUENCY=10 \
       -v /foo/galera-haproxy.cfg.tpl:/etc/haproxy.cfg.tpl \
-      haproxy-service
+      colinmollenhour/haproxy-service
 
 Or as a new image:
 
-    FROM luckyg/haproxy-service
+    FROM colinmollenhour/haproxy-service
     COPY galera-haproxy.cfg.tpl /etc/haproxy.cfg.tpl
     ENV SERVICE_HOSTNAME tasks.galera
     ENV UPDATE_FREQUENCY 10
