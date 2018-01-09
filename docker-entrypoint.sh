@@ -13,7 +13,7 @@ if haproxy -v | grep -qF 'version 1.7.'; then
 		rm -f /run/haproxy.pid
 		set -- "$(which haproxy-systemd-wrapper)" -p /run/haproxy.pid "$@"
 	fi
-else:
+else
 	KILLSIGNAL=USR2
 	if [ "$1" = 'haproxy' ]; then
 		shift # "haproxy"
