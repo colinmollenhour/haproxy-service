@@ -5,13 +5,17 @@ if [ "${1#-}" != "$1" ]; then
 	set -- haproxy "$@"
 fi
 
-if [ "$1" = 'haproxy' ]; then
-	if haproxy -v | grep -qF 'version 1.7.'; then
+if haproxy -v | grep -qF 'version 1.7.'; then
+	KILLSIGNAL=HUP
+	if [ "$1" = 'haproxy' ]; then
 		# if the user wants "haproxy", let's use "haproxy-systemd-wrapper" instead so we can have proper reloadability implemented by upstream
 		shift # "haproxy"
 		rm -f /run/haproxy.pid
 		set -- "$(which haproxy-systemd-wrapper)" -p /run/haproxy.pid "$@"
-	else:
+	fi
+else:
+	KILLSIGNAL=USR2
+	if [ "$1" = 'haproxy' ]; then
 		shift # "haproxy"
 		# if the user wants "haproxy", let's add a couple useful flags
 		#   -W  -- "master-worker mode" (similar to the old "haproxy-systemd-wrapper"; allows for reload via "SIGUSR2")
@@ -70,16 +74,16 @@ function shutdown () {
 }
 trap shutdown TERM INT
 
-# Trap Reload (HUP)
+# Trap Reload (HUP or USR2)
 function reload () {
 	if haproxy -c -f ${TEMPLATE%.tpl} >/dev/null; then
 		echo $PREFIX: Reloading config...
-		kill -HUP $WRAPPER_PID
+		kill -$KILLSIGNAL $WRAPPER_PID
 	else
 		echo $PREFIX: Config test failed, will not reload haproxy.
 	fi
 }
-trap reload HUP
+trap reload HUP USR2
 
 # Run loop to update config template
 while sleep $UPDATE_FREQUENCY; do
