@@ -12,32 +12,30 @@ Multiple DNS hostnames may be specified separated by commas.
 
 #### Logging
 
-Rsyslog is installed in order to provide syslog messages from haproxy on stdout. It can be disabled by
-setting the `RSYSLOG` environment variable to `n`. In order to use it your HAProxy config should look like
-something like this:
+HAProxy 1.9+ supports direct to stdout/stderr logging so rsyslog was removed.
 
-    global
-      log 127.0.0.1 local0 notice
-    
-    defaults
-      log global
+#### User
 
-#### Examples
+This container runs as `root` rather than `haproxy` as it must write over the config file while running.
 
-Run directly:
+#### Usage
+
+Run the image directly by mounting the config file as a volume:
 
     $ docker run \
       -e SERVICE_HOSTNAME=tasks.galera \
       -e UPDATE_FREQUENCY=10 \
-      -v /foo/galera-haproxy.cfg.tpl:/etc/haproxy.cfg.tpl \
-      colinmollenhour/haproxy-service
+      -v /path/to/your/haproxy.cfg.tpl:/etc/haproxy.cfg.tpl:ro \
+      colinmollenhour/haproxy-service:2.6-alpine
 
-Or as a new image:
+Or build the config into the image:
 
-    FROM colinmollenhour/haproxy-service
-    COPY galera-haproxy.cfg.tpl /etc/haproxy.cfg.tpl
-    ENV SERVICE_HOSTNAME tasks.galera
-    ENV UPDATE_FREQUENCY 10
+    FROM colinmollenhour/haproxy-service:2.6-alpine
+    COPY haproxy.cfg.tpl /etc/haproxy.cfg.tpl
+    ENV SERVICE_HOSTNAME my-service
+    ENV UPDATE_FREQUENCY 5
+
+See the `samples/` directory for basic examples.
 
 #### Template Format
 
@@ -63,3 +61,4 @@ If the `SERVICE_HOSTNAME` resolves to 10.0.0.12 and 10.0.0.20 it would render:
 
 If you need to run some basic scripts on init before the first template render mount or add a file at
 `/docker-entrypoint-init.sh` which will be sourced by `docker-entrypoint.sh` once on startup.
+

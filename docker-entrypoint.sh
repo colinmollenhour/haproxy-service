@@ -1,32 +1,24 @@
 #!/bin/bash
 
+set -e
+
 # first arg is `-f` or `--some-option`
 if [ "${1#-}" != "$1" ]; then
 	set -- haproxy "$@"
 fi
 
-if haproxy -v | grep -qF 'version 1.7.'; then
-	KILLSIGNAL=HUP
-	if [ "$1" = 'haproxy' ]; then
-		# if the user wants "haproxy", let's use "haproxy-systemd-wrapper" instead so we can have proper reloadability implemented by upstream
-		shift # "haproxy"
-		rm -f /run/haproxy.pid
-		set -- "$(which haproxy-systemd-wrapper)" -p /run/haproxy.pid "$@"
-	fi
-else
-	KILLSIGNAL=USR2
-	if [ "$1" = 'haproxy' ]; then
-		shift # "haproxy"
-		# if the user wants "haproxy", let's add a couple useful flags
-		#   -W  -- "master-worker mode" (similar to the old "haproxy-systemd-wrapper"; allows for reload via "SIGUSR2")
-		#   -db -- disables background mode
-		set -- haproxy -W -db "$@"
-	fi
-fi
-
+KILLSIGNAL=HUP
 PREFIX=docker-entrypoint.sh
 TEMPLATE=${TEMPLATE:-/etc/haproxy.cfg.tpl}
-UPDATE_FREQUENCY=${UPDATE_FREQUENCY:-30}
+UPDATE_FREQUENCY=${UPDATE_FREQUENCY:-10}
+
+if [ "$1" = 'haproxy' ]; then
+	shift # "haproxy"
+	# if the user wants "haproxy", let's add a couple useful flags
+	#   -W  -- "master-worker mode" (allows for reload via "SIGUSR2")
+	set -- haproxy -W "$@"
+fi
+
 
 # enable job control, start processes
 set -m
@@ -45,40 +37,32 @@ if [[ -f /docker-entrypoint-init.sh ]]; then
 fi
 
 # Render config template once before starting HAProxy
-/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
-if [ $? -eq 1 ]; then
+/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE || RENDER_CODE=$?
+if [[ $RENDER_CODE -eq 1 ]]; then
 	sleep 5
-	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
-	if [ $? -eq 1 ]; then
-		echo $PREFIX: Could not render ${TEMPLATE%.tpl}. Refusing to start.
+	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE || RENDER_CODE=$?
+	if [[ $RENDER_CODE -eq 1 ]]; then
+		echo "$PREFIX: Could not render ${TEMPLATE%.tpl}. Refusing to start. ($RENDER_CODE)"
 		exit 1
 	fi
 fi
 
-# Run rsyslogd if enabled
-RSYSLOG_PID=0
-if [ "$RSYSLOG" != "n" ]; then
-	rm -f /var/run/rsyslog.pid
-	rsyslogd -n -f /etc/rsyslogd.conf &
-	RSYSLOGD_PID=$!
-fi
-
 # Run HAProxy (haproxy-systemd-wrapper) and wait for exit
 "$@" &
-WRAPPER_PID=$!
+HAPROXY_PID=$!
 
 # Trap Shutdown
 function shutdown () {
 	echo $PREFIX: Shutting down...
-	kill -TERM $WRAPPER_PID
+	kill -USR1 $HAPROXY_PID
 }
-trap shutdown TERM INT
+trap shutdown TERM INT USR1
 
 # Trap Reload (HUP or USR2)
 function reload () {
 	if haproxy -c -f ${TEMPLATE%.tpl} >/dev/null; then
 		echo $PREFIX: Reloading config...
-		kill -$KILLSIGNAL $WRAPPER_PID
+		kill -$KILLSIGNAL $HAPROXY_PID
 	else
 		echo $PREFIX: Config test failed, will not reload haproxy.
 	fi
@@ -87,20 +71,19 @@ trap reload HUP USR2
 
 # Run loop to update config template
 while sleep $UPDATE_FREQUENCY; do
-	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE
+	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE || RENDER_RESULT=$?
 	# Exit code 0 means template was updated, 1 means error and 2 means not updated
 	RENDER_RESULT=$?
-	if [ $RENDER_RESULT -eq 0 ]; then
+	if [[ $RENDER_RESULT -eq 0 ]]; then
 		reload
-	elif [ $RENDER_RESULT -eq 1 ]; then
-		echo $PREFIX: Error updating config template!
+	elif [[ $RENDER_RESULT -eq 1 ]]; then
+		echo "$PREFIX: Error updating config template! ($RENDER_RESULT)"
 	fi
 done &
 RENDER_PID=$!
 
-wait $WRAPPER_PID
+wait $HAPROXY_PID
 RC=$?
 
 kill $RENDER_PID
-[ "$RSYSLOG_PID" -ne 0 ] && kill $RSYSLOG_PID
 exit $RC

@@ -7,6 +7,8 @@
 #
 # Multiple hostnames may be given separated by commas, with no spaces
 
+set -e
+
 service=$1
 template=$2
 
@@ -27,7 +29,7 @@ else
 
   # Resolve DNS
   for _service in ${service//,/ }; do
-    nslookup $_service 2>/dev/null | gawk '/Address /{print $3}'
+    nslookup $_service 2>/dev/null | awk '/^Name:/{p=1} p&&/^Address:/{ print $2 }'
   done | sort | paste -sd ',' > $tmpfile
   if [ $(wc -c $tmpfile | gawk '{print $1}') -eq 0 ]; then
     rm $tmpfile
@@ -46,6 +48,7 @@ else
     rm $oldfile
   fi
 
+  echo "New service addresses: $(cat $tmpfile)"
   IFS=',' read -ra ips < $tmpfile
 fi
 
