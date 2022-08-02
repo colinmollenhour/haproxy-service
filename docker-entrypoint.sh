@@ -73,8 +73,8 @@ trap reload HUP USR2
 while sleep $UPDATE_FREQUENCY; do
 	/render_cfg.sh $SERVICE_HOSTNAME $TEMPLATE || RENDER_RESULT=$?
 	# Exit code 0 means template was updated, 1 means error and 2 means not updated
-	RENDER_RESULT=$?
 	if [[ $RENDER_RESULT -eq 0 ]]; then
+		echo "$PREFIX: Configuration updated."
 		reload
 	elif [[ $RENDER_RESULT -eq 1 ]]; then
 		echo "$PREFIX: Error updating config template! ($RENDER_RESULT)"
